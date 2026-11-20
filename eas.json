@@ -1,0 +1,36 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "pruebas": {
+      "channel": "pruebas",
+      "autoIncrement": true,
+      "env": { "EXPO_PUBLIC_API_URL": "https://api-pruebas.DOMINIO" }
+    },
+    "pruebas-apk": {
+      "extends": "pruebas",
+      "distribution": "internal",
+      "android": { "buildType": "apk" }
+    },
+    "produccion": {
+      "channel": "produccion",
+      "autoIncrement": true,
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.DOMINIO" }
+    },
+    "produccion-apk": {
+      "extends": "produccion",
+      "distribution": "internal",
+      "android": { "buildType": "apk" }
+    }
+  },
+  "submit": {
+    "pruebas": {
+      "android": { "track": "internal" }
+    },
+    "produccion": {
+      "android": { "track": "beta" }
+    }
+  }
+}

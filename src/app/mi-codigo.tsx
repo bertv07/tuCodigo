@@ -1,26 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, AppState, ActivityIndicator, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, StyleSheet, AppState, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { usePreventScreenCapture } from 'expo-screen-capture';
+import * as Brightness from 'expo-brightness';
+import Svg, { Circle } from 'react-native-svg';
+import { Sun, UserRound } from 'lucide-react-native';
 import { Qr } from '../components/Qr';
-import { Boton } from '../components/ui';
+import { IconBtn, TabBar } from '../components/ds';
+import { Simbolo } from '../components/ui';
 import { api, ApiError } from '../lib/api';
-import { colors, fonts } from '../lib/theme';
+import { colors, fonts, HERO } from '../lib/theme';
 
 type QrResp = { qr: string; venceEn: number; codigo: string; estado: string; nombre: string; documento: string | null };
 
 /**
- * 16 · Mi Código: QR firmado por el servidor que cambia cada 60 s.
- * Una captura de pantalla deja de servir al minuto, y en Android las capturas quedan bloqueadas en esta pantalla.
+ * 16 · Mi Código: QR firmado por el servidor que cambia cada 60 s (una captura deja de servir al minuto;
+ * en Android las capturas están bloqueadas). El botón de sol sube el brillo para que el escáner lo lea mejor.
  */
 export default function MiCodigo() {
   usePreventScreenCapture();
   const [d, setD] = useState<QrResp | null>(null);
   const [resta, setResta] = useState(0);
   const [error, setError] = useState('');
+  const [brillo, setBrillo] = useState(false);
   const vence = useRef(0);
+  const previo = useRef<number | null>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -36,54 +43,67 @@ export default function MiCodigo() {
       setResta(s);
       if (s === 0 && vence.current) { vence.current = 0; cargar(); }
     }, 1000);
-    // Al volver a la app se pide un QR nuevo
     const sub = AppState.addEventListener('change', st => { if (st === 'active') cargar(); });
     return () => { clearInterval(t); sub.remove(); };
   }, [cargar]);
 
+  // Al salir de la pantalla se devuelve el brillo que tenía el teléfono
+  useFocusEffect(useCallback(() => () => { if (previo.current !== null) { Brightness.setBrightnessAsync(previo.current).catch(() => {}); previo.current = null; setBrillo(false); } }, []));
+  async function alternarBrillo() {
+    try {
+      if (!brillo) { previo.current = await Brightness.getBrightnessAsync(); await Brightness.setBrightnessAsync(1); setBrillo(true); }
+      else { if (previo.current !== null) await Brightness.setBrightnessAsync(previo.current); previo.current = null; setBrillo(false); }
+    } catch { /* sin permiso de brillo */ }
+  }
+
+  const R = 9, C = 2 * Math.PI * R;
   return (
-    <SafeAreaView style={s.root}>
+    <View style={{ flex: 1, backgroundColor: colors.white }}>
       <StatusBar style="light" />
-      <View style={s.top}>
-        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="Volver"><Text style={s.back}>‹</Text></Pressable>
-        <Text style={s.title}>Mi Código</Text>
-        <View style={{ width: 14 }} />
-      </View>
-      <View style={s.body}>
-        {d ? (
-          <>
-            <Text style={s.nombre}>{d.nombre}</Text>
-            <Text style={s.doc}>{d.documento} · {d.estado === 'VERIFICADO' ? 'Verificada ✓' : 'En validación'}</Text>
-            <View style={s.qrBox}><Qr value={d.qr} size={236} /></View>
-            <Text style={s.codigo} selectable>{d.codigo}</Text>
-            <View style={s.reloj}>
-              <View style={[s.barra, { width: `${(resta / 60) * 100}%` }]} />
-            </View>
-            <Text style={s.small}>Se renueva en {resta} s · las capturas no sirven</Text>
-          </>
-        ) : error ? (
-          <View style={{ gap: 14, alignItems: 'stretch', width: '100%' }}>
-            <Text style={s.err}>{error}</Text>
-            <Boton title="Reintentar" variant="gold" onPress={cargar} />
+      <LinearGradient colors={HERO} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ flex: 1 }}>
+        <View style={s.aro} pointerEvents="none" />
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={s.top}><Text style={s.title}>Mi Código</Text><IconBtn Icono={Sun} glass label={brillo ? 'Bajar el brillo' : 'Subir el brillo al máximo'} onPress={alternarBrillo} /></View>
+          <View style={s.body}>
+            {d ? (
+              <>
+                <View style={s.persona}>
+                  <View style={s.avatar}><UserRound size={26} color={colors.navy} /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.nombre}>{d.nombre}</Text>
+                    <Text style={s.doc}>{d.documento} · {d.estado === 'VERIFICADO' ? 'Verificada ✓' : 'En validación'}</Text>
+                  </View>
+                  <Simbolo size={26} dark />
+                </View>
+                <View style={s.qrBox}><Qr value={d.qr} size={196} /></View>
+                <Text style={s.codigo} selectable>{d.codigo}</Text>
+                <View style={s.reloj}>
+                  <Svg width={22} height={22}><Circle cx={11} cy={11} r={R} stroke="rgba(255,255,255,0.18)" strokeWidth={3} fill="none" />
+                    <Circle cx={11} cy={11} r={R} stroke={colors.gold} strokeWidth={3} fill="none" strokeDasharray={`${C}`} strokeDashoffset={C * (1 - resta / 60)} strokeLinecap="round" transform="rotate(-90 11 11)" /></Svg>
+                  <Text style={s.relojT}>Se renueva en <Text style={{ fontFamily: fonts.bold, color: colors.white }}>{resta} s</Text> · las capturas no sirven</Text>
+                </View>
+              </>
+            ) : error ? <Text style={s.error}>{error}</Text> : <ActivityIndicator color={colors.gold} />}
           </View>
-        ) : <ActivityIndicator color={colors.gold} />}
-      </View>
-    </SafeAreaView>
+        </SafeAreaView>
+      </LinearGradient>
+      <TabBar />
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.navy },
-  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8 },
-  back: { fontFamily: fonts.bold, color: colors.white, fontSize: 28, lineHeight: 30 },
-  title: { fontFamily: fonts.bold, color: colors.white, fontSize: 16 },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
-  nombre: { fontFamily: fonts.title, color: colors.white, fontSize: 22 },
-  doc: { fontFamily: fonts.semibold, color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-  qrBox: { backgroundColor: colors.white, borderRadius: 28, padding: 18, marginVertical: 14, borderWidth: 3, borderColor: colors.gold },
-  codigo: { fontFamily: fonts.title, color: colors.goldLight, fontSize: 22, letterSpacing: 0.5 },
-  reloj: { width: 200, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', overflow: 'hidden', marginTop: 8 },
-  barra: { height: 4, backgroundColor: colors.gold },
-  small: { fontFamily: fonts.regular, color: 'rgba(255,255,255,0.65)', fontSize: 12 },
-  err: { fontFamily: fonts.semibold, color: colors.white, fontSize: 15, textAlign: 'center' },
+  aro: { position: 'absolute', width: 340, height: 340, borderRadius: 170, borderWidth: 22, borderColor: 'rgba(255,255,255,0.07)', top: 330, left: -170 },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 8 },
+  title: { fontFamily: fonts.bold, fontSize: 18, color: colors.white },
+  body: { flex: 1, paddingHorizontal: 20, alignItems: 'center', gap: 16, paddingTop: 6 },
+  persona: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, padding: 12 },
+  avatar: { width: 46, height: 46, borderRadius: 14, backgroundColor: colors.navy100, alignItems: 'center', justifyContent: 'center' },
+  nombre: { fontFamily: fonts.bold, fontSize: 15, color: colors.white },
+  doc: { fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  qrBox: { backgroundColor: colors.white, borderRadius: 26, padding: 14 },
+  codigo: { fontFamily: fonts.title, fontSize: 22, color: colors.goldLight, letterSpacing: 1 },
+  reloj: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  relojT: { fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+  error: { fontFamily: fonts.semibold, color: '#FFB4B4', fontSize: 14, textAlign: 'center', marginTop: 40 },
 });

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Boton } from '../../components/ui';
-import { Pasos } from '../../components/Pasos';
+import { Pasos } from '../../components/ds';
 import { api, ApiError } from '../../lib/api';
 import { estadoRegistro, type EstadoRegistro } from '../../lib/registro';
 import { colors, fonts } from '../../lib/theme';
@@ -18,7 +18,7 @@ export default function Revisar() {
   async function enviar() {
     setError(''); setCargando(true);
     try {
-      const x = await api<{ codigo: string; fundadorNumero: number }>('/v1/registro/enviar', { method: 'POST', auth: true });
+      const x = await api<{ codigo: string; fundadorNumero: number | null }>('/v1/registro/enviar', { method: 'POST', auth: true });
       router.replace({ pathname: '/registro/listo', params: { codigo: x.codigo, numero: String(x.fundadorNumero) } });
     } catch (e) { setError(e instanceof ApiError ? e.message : 'Ocurrió un error.'); }
     finally { setCargando(false); }
@@ -35,7 +35,7 @@ export default function Revisar() {
 
   return (
     <SafeAreaView style={s.root}>
-      <Pasos paso={4} volver={false} />
+      <Pasos paso={4} onBack={() => router.replace('/inicio')} />
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.h1}>{r.estado === 'CORRECCION' ? 'Necesitamos un ajuste' : 'Revisa y envía'}</Text>
         {r.motivo ? <View style={s.aviso}><Text style={s.avisoT}>Mensaje del equipo de validación</Text><Text style={s.avisoD}>{r.motivo}</Text></View>

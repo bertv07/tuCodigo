@@ -4,20 +4,24 @@
     "slug": "tu-codigo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon-tucodigo.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.procurasiglo21.tucodigo",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "TU CÓDIGO usa Face ID para que entres a tu cuenta de forma segura."
       }
     },
     "android": {
       "package": "com.procurasiglo21.tucodigo",
       "adaptiveIcon": {
-        "backgroundColor": "#15294F",
-        "foregroundImage": "./assets/icon-tucodigo.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
+        "backgroundColor": "#15294F"
       },
       "allowBackup": false,
       "predictiveBackGestureEnabled": false,
@@ -38,15 +42,15 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/icon-tucodigo.png",
-          "imageWidth": 160,
+          "image": "./assets/splash.png",
+          "imageWidth": 140,
           "backgroundColor": "#15294F"
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "TU CÓDIGO usa la cámara para fotografiar tu cédula y tomar tu selfie de verificación.",
+          "cameraPermission": "TU CÓDIGO usa la cámara para fotografiar tu cédula, tomar tu selfie de verificación y escanear códigos QR en taquilla.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -54,15 +58,32 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": false,
+          "photosPermission": "TU CÓDIGO te permite elegir la foto de tu cédula desde tu galería.",
           "cameraPermission": false,
           "microphonePermission": false
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "TU CÓDIGO usa Face ID para que entres a tu cuenta de forma segura."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notificacion.png",
+          "color": "#15294F"
         }
       ]
     ],
     "scheme": "tucodigo",
     "experiments": {
       "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

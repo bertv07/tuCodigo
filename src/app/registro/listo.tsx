@@ -1,68 +1,53 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { Boton, Simbolo } from '../../components/ui';
+import { BadgeCheck, Check, ScanFace, FileSignature } from 'lucide-react-native';
+import { Boton } from '../../components/ui';
+import { Card, Hero, Li, Badge, Av } from '../../components/ds';
 import { useAuth } from '../../lib/auth';
+import { asistido } from '../../lib/api';
 import { colors, fonts } from '../../lib/theme';
 
-const PASOS = [
-  { t: 'Datos y teléfono', d: 'Verificado por OTP', e: 'Listo', ok: true },
-  { t: 'Cédula y selfie', d: 'Validación del equipo', e: 'En revisión', ok: false },
-  { t: 'Elegir producto y firmar', d: 'Ya puedes ver el catálogo', e: 'Siguiente', ok: false },
-];
-
-/** 07 · ¡Ya tienes tu código! */
+/** 07 · ¡Ya tienes tu código! (o, en taquilla, el resumen para el promotor) */
 export default function Listo() {
   const { codigo, numero } = useLocalSearchParams<{ codigo: string; numero: string }>();
   const { recargar } = useAuth();
-  const ir = async () => { await recargar(); router.replace('/inicio'); };
+  const enTaquilla = !!asistido.token;
+  const ir = async () => {
+    if (enTaquilla) { asistido.token = null; router.replace('/promotor'); return; }
+    await recargar(); router.replace('/catalogo');
+  };
 
   return (
     <SafeAreaView style={s.root}>
-      <StatusBar style="light" />
       <ScrollView contentContainerStyle={s.body}>
-        <View style={{ alignItems: 'center', gap: 10, marginTop: 10 }}>
-          <Simbolo size={64} dark />
-          <Text style={s.h1}>¡Ya tienes tu código!</Text>
-          <Text style={s.p}>Estamos validando tus fotos. Te avisamos por WhatsApp en minutos.</Text>
+        <View style={{ alignItems: 'center', gap: 10, marginTop: 18 }}>
+          <Av Icono={BadgeCheck} tono="green" size={72} />
+          <Text style={s.h1}>¡Ya tienes{'\n'}tu código!</Text>
+          <Text style={s.p}>{enTaquilla ? 'El registro quedó en la cola de validación. El cliente recibirá el aviso por WhatsApp.' : 'Estamos validando tus fotos. Te avisamos por WhatsApp en minutos.'}</Text>
         </View>
-        <View style={s.tarjeta}>
+        <Hero style={{ alignItems: 'center', gap: 6, paddingVertical: 24 }}>
           <Text style={s.small}>Tu Código Directo</Text>
           <Text style={s.codigo} selectable>{codigo}</Text>
-          <View style={s.sello}><Text style={s.selloText}>Suscriptor fundador N.º {Number(numero).toLocaleString('es-VE')}</Text></View>
-        </View>
-        <View style={s.lista}>
-          {PASOS.map((p, i) => (
-            <View key={p.t} style={[s.fila, i > 0 && { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' }]}>
-              <View style={[s.punto, p.ok && { backgroundColor: colors.green }]}><Text style={s.puntoText}>{p.ok ? '✓' : i + 1}</Text></View>
-              <View style={{ flex: 1 }}><Text style={s.ft}>{p.t}</Text><Text style={s.fd}>{p.d}</Text></View>
-              <Text style={[s.fe, p.ok && { color: '#7BE0B5' }]}>{p.e}</Text>
-            </View>
-          ))}
-        </View>
+          {Number(numero) > 0 && <Text style={s.small}>Suscriptor fundador N.º {Number(numero).toLocaleString('es-VE')}</Text>}
+        </Hero>
+        <Card style={{ paddingVertical: 4 }}>
+          <Li Icono={Check} tono="green" titulo="Datos y teléfono" sub="Verificado por OTP" derecha={<Badge texto="Listo" tono="ok" />} />
+          <Li Icono={ScanFace} tono="gold" titulo="Cédula y selfie" sub="Validación del equipo" derecha={<Badge texto="En revisión" tono="warn" />} />
+          <Li Icono={FileSignature} titulo="Elegir producto y firmar" sub="Ya puedes ver el catálogo" derecha={<Badge texto="Siguiente" tono="info" />} ultimo />
+        </Card>
       </ScrollView>
-      <View style={s.bottom}><Boton title="Ir al inicio" variant="gold" onPress={ir} /></View>
+      <View style={s.bottom}><Boton title={enTaquilla ? 'Volver a la estación' : 'Ver catálogo'} onPress={ir} /></View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.navy },
-  body: { padding: 22, gap: 20 },
-  h1: { fontFamily: fonts.title, fontSize: 26, color: colors.white, textAlign: 'center' },
-  p: { fontFamily: fonts.regular, fontSize: 14, color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 21 },
-  tarjeta: { backgroundColor: colors.navyDark, borderRadius: 26, padding: 22, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(193,154,62,0.45)' },
-  small: { fontFamily: fonts.semibold, color: 'rgba(255,255,255,0.65)', fontSize: 12, letterSpacing: 1 },
-  codigo: { fontFamily: fonts.title, color: colors.goldLight, fontSize: 24 },
-  sello: { backgroundColor: 'rgba(193,154,62,0.18)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5 },
-  selloText: { fontFamily: fonts.bold, color: colors.goldLight, fontSize: 12 },
-  lista: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 22, paddingHorizontal: 16 },
-  fila: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
-  punto: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
-  puntoText: { fontFamily: fonts.bold, color: colors.white, fontSize: 13 },
-  ft: { fontFamily: fonts.bold, color: colors.white, fontSize: 14 },
-  fd: { fontFamily: fonts.regular, color: 'rgba(255,255,255,0.6)', fontSize: 12 },
-  fe: { fontFamily: fonts.semibold, color: colors.goldLight, fontSize: 12 },
-  bottom: { padding: 22 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  body: { padding: 20, gap: 16 },
+  h1: { fontFamily: fonts.title, fontSize: 28, lineHeight: 32, color: colors.navy, textAlign: 'center' },
+  p: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink2, textAlign: 'center', lineHeight: 21, paddingHorizontal: 10 },
+  small: { fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.72)' },
+  codigo: { fontFamily: fonts.title, fontSize: 26, color: colors.goldLight, letterSpacing: 0.5 },
+  bottom: { padding: 20 },
 });
